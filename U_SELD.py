@@ -21,11 +21,13 @@ class U_SELD(nn.Module):
 
     def forward(self, input):
         output = self.fe(input)
+        output = self.adapt_maxpooling(output)
         output = output.transpose(1, 2).contiguous()
         x = output.view(output.shape[0], output.shape[1], -1).contiguous()
         (x, _) = self.bigru(x)
         x = x[:, :, x.shape[-1]//2:] + x[:, :, :x.shape[-1]//2]
         x = torch.tanh(self.linear(x))
+
         return x
 
     def _initialize_weights(self):
@@ -54,8 +56,6 @@ class Ufe(nn.Module):
         self.conv3 = ConvBlock(4*out_channels, 2*out_channels)
         self.up3 = Up(2*out_channels, up_size=(250, 64))
         self.conv4 = ConvBlock(2*out_channels, out_channels)
-
-
 
     def forward(self, input):
         res1 = self.conv1(input)
@@ -104,7 +104,7 @@ class Down(nn.Module):
         return output
 
 class Up(nn.Module):
-    def __init__(self, in_channels, up_size=(10, 16), ct=False):
+    def __init__(self, in_channels, up_size=(10, 16)):
         super(Up, self).__init__()
         self.up = nn.UpsamplingBilinear2d(size=up_size)
         self.conv1 = ConvBlock(in_channels, in_channels // 2)
